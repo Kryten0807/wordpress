@@ -108,7 +108,7 @@ $db_initialized = false;
 
 // declare the sleep time (in seconds) between attempts to create the database
 //
-$delay = 10;
+$delay = 3;
 
 // declare a timeout interval in seconds
 //
