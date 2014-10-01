@@ -106,6 +106,10 @@ TERM=dumb php -- "$WORDPRESS_DB_HOST" "$WORDPRESS_DB_USER" "$WORDPRESS_DB_PASSWO
 //
 $db_initialized = false;
 
+// declare the sleep time (in seconds) between attempts to create the database
+//
+$delay = 10;
+
 // declare a timeout interval in seconds
 //
 $timeout = 3 * 60;
@@ -147,6 +151,13 @@ while (!$db_intialized && time()<($start_time + $timeout)) {
 	// close the database connection
 	//
 	$mysql->close();
+
+	// has the database been initialized? if not, then pause before continuing
+	// through the loop again; otherwise, just carry on out of the loop
+	//
+	if (!$db_initialized) {
+		sleep($delay);
+	}
 }
 EOPHP
 
