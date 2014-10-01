@@ -95,23 +95,59 @@ done
 
 TERM=dumb php -- "$WORDPRESS_DB_HOST" "$WORDPRESS_DB_USER" "$WORDPRESS_DB_PASSWORD" "$WORDPRESS_DB_NAME" <<'EOPHP'
 <?php
-// database might not exist, so let's try creating it (just to be safe)
 
+// if this script is run from Fig, it may be the case that the database may take
+// some time to start up, since the database container is being started at the
+// same time as this container. To overcome this, we'll keep trying this until
+// either a) we succeed, or b) the timeout has elapsed
+//
+
+// declare a flag to indicate when the database has been initialized
+//
+$db_initialized = false;
+
+// declare a timeout interval in seconds
+//
+$timeout = 3 * 60;
+
+// save the start time
+//
+$start_time = time();
+
+// get the database connection values
+//
 list($host, $port) = explode(':', $argv[1], 2);
-$mysql = new mysqli($host, $argv[2], $argv[3], '', (int)$port);
 
-if ($mysql->connect_error) {
-	file_put_contents('php://stderr', 'MySQL Connection Error: (' . $mysql->connect_errno . ') ' . $mysql->connect_error . "\n");
-	exit(1);
-}
+// start the loop
+//
+while (!$db_intialized && time()<($start_time + $timeout)) {
+	// database might not exist, so let's try creating it (just to be safe)
+	//
+	$mysql = new mysqli($host, $argv[2], $argv[3], '', (int)$port);
 
-if (!$mysql->query('CREATE DATABASE IF NOT EXISTS `' . $mysql->real_escape_string($argv[4]) . '`')) {
-	file_put_contents('php://stderr', 'MySQL "CREATE DATABASE" Error: ' . $mysql->error . "\n");
+	// did we get a connection error? if so, then report it and carry on;
+	// otherwise, attempt to create the database
+	//
+	if ($mysql->connect_error) {
+		// put the error string to STDERR
+		//
+		file_put_contents('php://stderr', 'MySQL Connection Error: (' . $mysql->connect_errno . ') ' . $mysql->connect_error . "\n");
+	} else {
+		// attempt to create the database. If successful, then set the
+		// $db_initialized flag; otherwise report the error and continue
+		//
+		if ($mysql->query('CREATE DATABASE IF NOT EXISTS `' . $mysql->real_escape_string($argv[4]) . '`')) {
+			file_put_contents('php://stderr', "Database created successfully!\n");
+			$db_initialized = true;
+		} else {
+			file_put_contents('php://stderr', 'MySQL "CREATE DATABASE" Error: ' . $mysql->error . "\n");
+		}
+	}
+
+	// close the database connection
+	//
 	$mysql->close();
-	exit(1);
 }
-
-$mysql->close();
 EOPHP
 
 chown -R "$APACHE_RUN_USER:$APACHE_RUN_GROUP" .
