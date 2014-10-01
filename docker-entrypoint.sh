@@ -124,7 +124,7 @@ list($host, $port) = explode(':', $argv[1], 2);
 
 // start the loop
 //
-while (!$db_intialized && time()<($start_time + $timeout)) {
+while (!$db_initialized && time()<($start_time + $timeout)) {
 	// database might not exist, so let's try creating it (just to be safe)
 	//
 	$mysql = new mysqli($host, $argv[2], $argv[3], '', (int)$port);
